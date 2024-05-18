@@ -27,5 +27,6 @@ go [here](https://github.com/RuiAlves99k/android-video/tree/main/apks) and downl
 
 ## Current Features
 
+The current features of this app
 
 ## Future Features
