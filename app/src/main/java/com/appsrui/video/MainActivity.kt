@@ -3,44 +3,53 @@ package com.appsrui.video
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
+import com.appsrui.video.ui.PlayerScreen
 import com.appsrui.video.ui.theme.VideoTheme
 
 class MainActivity : ComponentActivity() {
+    private lateinit var mediaSession: MediaSession
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setupMediaSession()
         setContent {
             VideoTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Greeting("Android")
-                }
+                PlayerScreen(player = mediaSession.player, token = mediaSession.token)
             }
         }
     }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    @OptIn(UnstableApi::class)
+    private fun setupMediaSession() {
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    VideoTheme {
-        Greeting("Android")
+        val player = ExoPlayer.Builder(this)
+            .setAudioAttributes(audioAttributes, true)
+            .setHandleAudioBecomingNoisy(true)
+            .setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+            .build()
+
+        player.addListener(object: Player.Listener{
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+               // TODO: Add/Remove window FLAG_KEEP_SCREEN_ON
+            }
+        })
+
+        mediaSession = MediaSession.Builder(this, player).build()
+    }
+
+    override fun onDestroy() {
+        mediaSession.player.release()
+        mediaSession.release()
+        super.onDestroy()
     }
 }
