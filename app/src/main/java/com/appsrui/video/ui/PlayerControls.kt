@@ -268,8 +268,8 @@ fun PlayerControlsPreview(){
                 isPlaying = false,
                 isLoading = false,
                 currentPosition = 5_000L,
-                bufferedPosition = 50_000L,
-                durationSeconds = 50
+                bufferedPosition = 10_000L,
+                durationSeconds = 30
             )
         }
     }
