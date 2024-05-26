@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
         setupMediaSession()
         setContent {
             VideoTheme {
-                PlayerScreen(player = mediaSession.player, token = mediaSession.token)
+                PlayerScreen(player = mediaSession.player, sessionToken = mediaSession.token)
             }
         }
     }
