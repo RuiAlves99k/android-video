@@ -1,7 +1,10 @@
 package com.appsrui.video.ui
 
+import android.content.res.Configuration
+import android.view.SurfaceView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -12,12 +15,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,18 +35,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import com.appsrui.video.PlayerScreenState
 import com.appsrui.video.R
 import com.appsrui.video.ui.theme.VideoTheme
 import kotlinx.coroutines.delay
+import kotlin.math.min
 
 @Composable
-fun VideoPlayer(player: Player, screenState: PlayerScreenState) {
+fun VideoPlayer(player: Player, screenState: PlayerScreenState, modifier: Modifier = Modifier) {
     VideoPlayer(
         player = player,
         isPlaying = screenState.isPlaying,
@@ -49,7 +58,10 @@ fun VideoPlayer(player: Player, screenState: PlayerScreenState) {
         currentPosition = screenState.currentPosition,
         bufferedPosition = screenState.bufferedPosition,
         durationSeconds = screenState.currentVideo?.durationSeconds,
+        currentSpeed = screenState.currentSpeed,
         controlsListener = screenState.controlsListener,
+        aspectRatio = screenState.videoAspectRatio,
+        modifier = modifier,
     )
 }
 
@@ -61,8 +73,11 @@ private fun VideoPlayer(
     currentPosition: Long,
     bufferedPosition: Long,
     durationSeconds: Int?,
+    currentSpeed: Float,
+    aspectRatio: Float,
     controlsListener: ControlsListener,
     error: Exception? = null,
+    modifier: Modifier = Modifier,
 ) {
     var showControls by remember(error) {
         mutableStateOf(error == null)
@@ -75,16 +90,27 @@ private fun VideoPlayer(
     ) {
         showControls = !showControls
     }
-    BoxWithConstraints(contentAlignment = Alignment.Center) {
+    BoxWithConstraints(
+        modifier = modifier,
+        contentAlignment = Alignment.Center) {
+        val heightDp: Float = when {
+            LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE -> maxHeight.value
+            aspectRatio < 1 -> (maxWidth.value/ aspectRatio) * 0.7f
+            else -> maxWidth.value / min(aspectRatio, 21f/9f)
+        }
         val modifier = Modifier
             .fillMaxWidth()
-            .height(maxWidth * 9 / 16f)
+            .height(heightDp.dp)
 
-        Spacer(
+        AndroidView(
+            factory = ::SurfaceView,
             modifier = modifier
-                .background(Color.Green)
-                .then(clickModifier)
-        )
+                .animateContentSize()
+                .size((heightDp * aspectRatio).dp, heightDp.dp)
+                .then(clickModifier),
+        ) { surfaceView ->
+            player?.setVideoSurfaceView(surfaceView)
+        }
 
         Crossfade(targetState = error, label = "ControlsOrErrorCrossfade") { error ->
             if (error != null) {
@@ -110,6 +136,7 @@ private fun VideoPlayer(
                         bufferedPosition = bufferedPosition,
                         durationSeconds = durationSeconds,
                         controlsListener = controlsListener,
+                        currentSpeed = currentSpeed,
                     )
                 }
             }
@@ -186,6 +213,8 @@ fun VideoPlayerPreview() {
                 currentPosition = 5_000L,
                 bufferedPosition = 50_000L,
                 durationSeconds = 100,
+                currentSpeed = 1f,
+                aspectRatio = 16f/9f,
                 controlsListener = PlayerControlsListener(player)
             )
         }

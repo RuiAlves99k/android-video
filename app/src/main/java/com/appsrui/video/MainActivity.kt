@@ -1,9 +1,14 @@
 package com.appsrui.video
 
+import android.content.res.Configuration
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
@@ -25,6 +30,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val controller = WindowCompat.getInsetsController(window, window.decorView.rootView)
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
     @OptIn(UnstableApi::class)
     private fun setupMediaSession() {
         val audioAttributes = AudioAttributes.Builder()
@@ -38,9 +55,13 @@ class MainActivity : ComponentActivity() {
             .setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
             .build()
 
-        player.addListener(object: Player.Listener{
+        player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-               // TODO: Add/Remove window FLAG_KEEP_SCREEN_ON
+                if (isPlaying) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
             }
         })
 

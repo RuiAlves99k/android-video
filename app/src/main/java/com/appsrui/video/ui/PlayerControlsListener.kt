@@ -4,7 +4,9 @@ import androidx.compose.runtime.Immutable
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import com.appsrui.video.model.Video
+import java.lang.Math.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 interface ControlsListener {
     fun onPlayPause() {}
@@ -14,6 +16,8 @@ interface ControlsListener {
     fun onForward() {}
     fun onRewind() {}
     fun onVideoClick(video: Video) {}
+
+    fun onSpeedChange(speed: Float) {}
 }
 
 @Immutable
@@ -69,5 +73,9 @@ class PlayerControlsListener(private val player: Player) : ControlsListener {
             player.prepare()
         }
         player.play()
+    }
+
+    override fun onSpeedChange(speed: Float) {
+        player.setPlaybackSpeed(speed)
     }
 }

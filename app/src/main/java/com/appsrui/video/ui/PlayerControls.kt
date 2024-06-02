@@ -9,11 +9,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -25,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +54,7 @@ fun PlayerControls(
     currentPosition: Long,
     bufferedPosition: Long,
     durationSeconds: Int?,
+    currentSpeed: Float,
     controlsListener: ControlsListener,
     modifier: Modifier,
 ) {
@@ -61,11 +66,13 @@ fun PlayerControls(
         currentPosition = currentPosition,
         bufferedPosition = bufferedPosition,
         durationSeconds = durationSeconds,
+        currentSpeed = currentSpeed,
         onRewind = controlsListener::onRewind,
         onForward = controlsListener::onForward,
         onSkipNext = controlsListener::onSkipNext,
         onSkipPrevious = controlsListener::onSkipPrevious,
         onSeek = controlsListener::onSeek,
+        onSpeedChange = controlsListener::onSpeedChange,
     )
 }
 
@@ -76,6 +83,7 @@ private fun PlayerControls(
     currentPosition: Long,
     bufferedPosition: Long,
     durationSeconds: Int?,
+    currentSpeed: Float,
     modifier: Modifier = Modifier,
     onPlayPause: () -> Unit = {},
     onRewind: () -> Unit = {},
@@ -83,7 +91,12 @@ private fun PlayerControls(
     onSkipNext: () -> Unit = {},
     onSkipPrevious: () -> Unit = {},
     onSeek: (seconds: Float) -> Unit = {},
+    onSpeedChange: (speed: Float) -> Unit = {},
 ) {
+    var showDropdown by rememberSaveable {
+        mutableStateOf(false)
+    }
+    val differentSpeeds: List<Float> = listOf<Float>(0.5f, 1f, 1.5f, 2f)
     val verticalGradient = Brush.verticalGradient(
         colorStops = arrayOf(
             0.0f to Color.Black.copy(alpha = 0.6f),
@@ -95,7 +108,7 @@ private fun PlayerControls(
     ConstraintLayout(
         modifier = modifier.background(verticalGradient)
     ) {
-        val (midControls, slider, startText, endText) = createRefs()
+        val (midControls, slider, startText, endText, speedIcon) = createRefs()
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
@@ -172,7 +185,7 @@ private fun PlayerControls(
             )
         }
         Text(
-            text = currentPosition.toFormattedDuration(TimeUnit.SECONDS),
+            text = currentPosition.toFormattedDuration(TimeUnit.MILLISECONDS),
             textAlign = TextAlign.Start,
             fontSize = 12.sp,
             modifier = Modifier.constrainAs(startText) {
@@ -210,6 +223,41 @@ private fun PlayerControls(
             durationSeconds = durationSeconds?.toLong() ?: 0L,
             onSeek = onSeek,
         )
+        Row(
+            modifier = Modifier
+                .constrainAs(speedIcon) {
+                    end.linkTo(parent.end)
+                    top.linkTo(parent.top)
+                }
+                .clickable {
+                    showDropdown = !showDropdown
+                },
+        ) {
+            Text(
+                text = "x$currentSpeed",
+                color = Color.White,
+            )
+            Column {
+                Icon(
+                    painter = painterResource(id = R.drawable.icon_speed),
+                    contentDescription = stringResource(id = R.string.speed_action_text),
+                    tint = Color.White,
+                )
+                DropdownMenu(
+                    expanded = showDropdown,
+                    onDismissRequest = { }) {
+                    differentSpeeds.map { speed ->
+                        DropdownMenuItem(
+                            text = { Text(text = "x$speed") },
+                            onClick = {
+                                onSpeedChange(speed)
+                                showDropdown = !showDropdown
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -252,7 +300,7 @@ private fun PlayerSlider(
                 SliderDefaults.Track(
                     colors = SliderDefaults.colors(inactiveTrackColor = Color.Transparent),
                     enabled = true,
-                    sliderPositions = SliderPositions(0f..sliderState),
+                    sliderPositions = it,
                 )
             }
         }
@@ -261,7 +309,7 @@ private fun PlayerSlider(
 
 @Preview(widthDp = 360, heightDp = 211)
 @Composable
-fun PlayerControlsPreview(){
+fun PlayerControlsPreview() {
     VideoTheme {
         Surface {
             PlayerControls(
@@ -269,7 +317,8 @@ fun PlayerControlsPreview(){
                 isLoading = false,
                 currentPosition = 5_000L,
                 bufferedPosition = 10_000L,
-                durationSeconds = 30
+                durationSeconds = 30,
+                currentSpeed = 1f,
             )
         }
     }
